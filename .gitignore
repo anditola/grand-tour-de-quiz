@@ -1,0 +1,9 @@
+# Tooling / lokale Ordner, die nicht ins Repo gehören
+.gstack/
+.claude/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
