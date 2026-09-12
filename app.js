@@ -346,12 +346,41 @@ function renderEnd() {
       <p class="verdict">${verdict}</p>
       <p class="visited">Diese Route: ${visited}</p>
       <div class="end-actions">
+        <button class="btn btn-red" id="shareBtn">Ergebnis teilen <span class="arrow">↗</span></button>
+        <button class="btn btn-ghost" id="restart">Neue Reise <span class="arrow">↻</span></button>
         <button class="btn btn-ghost" id="reviewMap">Karte ansehen</button>
-        <button class="btn btn-red" id="restart">Neue Zufallsreise <span class="arrow">↻</span></button>
       </div>
     </section>`;
   document.getElementById("restart").onclick = () => { startJourney(); render(); };
   document.getElementById("reviewMap").onclick = () => { state.view = "map"; render(); };
+  document.getElementById("shareBtn").onclick = () => shareResult(score, total, rank);
+}
+
+/* ---------- Ergebnis teilen (Web Share API + Fallback) ---------- */
+const SHARE_URL = "https://anditola.github.io/grand-tour-de-quiz/";
+
+async function shareResult(score, total, rank) {
+  const text = `🇨🇭 Grand Tour de Quiz: ${score}/${total} Punkte — Rang «${rank}». Reise mit über die Landkarte der Schweiz und schau, ob du mehr schaffst!`;
+  const data = { title: "Grand Tour de Quiz", text, url: SHARE_URL };
+  if (navigator.share) {
+    try { await navigator.share(data); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${SHARE_URL}`);
+    toast("Ergebnis kopiert — jetzt teilen!");
+  } catch (e) {
+    toast("Zum Teilen: " + SHARE_URL);
+  }
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 2800);
 }
 
 /* ============================================================
