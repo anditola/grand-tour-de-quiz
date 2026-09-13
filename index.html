@@ -20,15 +20,24 @@
       </span>
       <span class="brand-name">GRAND TOUR<span class="brand-thin"> DE QUIZ</span></span>
     </div>
-    <div class="topbar-meta" id="topbarMeta"></div>
+    <div class="topbar-right">
+      <div class="lang-switch" id="langSwitch" role="group" aria-label="Sprache">
+        <button type="button" data-lang="de">DE</button>
+        <button type="button" data-lang="fr">FR</button>
+        <button type="button" data-lang="it">IT</button>
+        <button type="button" data-lang="rm">RM</button>
+      </div>
+      <div class="topbar-meta" id="topbarMeta"></div>
+    </div>
   </header>
 
   <main id="app" class="stage"></main>
 
   <footer class="footer">
-    <span>Entdecke die Schweiz — Kanton für Kanton, Fakt für Fakt.</span>
+    <span id="footerText">Entdecke die Schweiz — Kanton für Kanton, Fakt für Fakt.</span>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="stations.js"></script>
   <script src="questions.js"></script>
   <script src="art.js"></script>

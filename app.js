@@ -12,6 +12,48 @@ const QUESTIONS_PER_STATION = 3; // Fragen, die pro Ort-Besuch gestellt werden
 const app = document.getElementById("app");
 const topbarMeta = document.getElementById("topbarMeta");
 
+/* ---------- Sprache (i18n) ---------- */
+let LANG = "de";
+try {
+  const saved = localStorage.getItem("gtdq_lang");
+  if (saved && LANGS.includes(saved)) LANG = saved;
+} catch (e) { /* localStorage evtl. nicht verfügbar */ }
+
+function t(key) {
+  const L = I18N[LANG] || I18N.de;
+  return key in L ? L[key] : I18N.de[key];
+}
+function topicLabel(topic) {
+  const map = (I18N[LANG] || I18N.de).topics || {};
+  return map[topic] || topic;
+}
+function fmt(str, params) {
+  return str.replace(/\{(\w+)\}/g, (_, k) => (params[k] != null ? params[k] : `{${k}}`));
+}
+function applyChrome() {
+  const foot = document.getElementById("footerText");
+  if (foot) foot.textContent = t("footer");
+  document.querySelectorAll("#langSwitch button").forEach((b) => {
+    const on = b.dataset.lang === LANG;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  document.documentElement.lang = LANG;
+}
+function setLang(l) {
+  if (!LANGS.includes(l)) return;
+  LANG = l;
+  try { localStorage.setItem("gtdq_lang", l); } catch (e) {}
+  applyChrome();
+  render();
+}
+function initLangSwitch() {
+  document.querySelectorAll("#langSwitch button").forEach((b) => {
+    b.onclick = () => setLang(b.dataset.lang);
+  });
+  applyChrome();
+}
+
 // Orte (stations.js) + Fragenbestand (questions.js) zur Reise zusammenführen.
 const JOURNEY = STATIONS.map((s) => ({ ...s, questions: QUESTIONS[s.id] || [] }));
 
@@ -80,8 +122,8 @@ function renderTopbar() {
   if (state.view === "start") { topbarMeta.innerHTML = ""; return; }
   const etappe = Math.min(state.current + (state.view === "station" ? 1 : 0), state.route.length);
   topbarMeta.innerHTML =
-    `Etappe <strong>${etappe}</strong> / ${state.route.length}` +
-    ` &nbsp;·&nbsp; Punkte <strong>${totalScore()}</strong>`;
+    `${t("etappe")} <strong>${etappe}</strong> / ${state.route.length}` +
+    ` &nbsp;·&nbsp; ${t("punkte")} <strong>${totalScore()}</strong>`;
 }
 
 /* ============================================================
@@ -90,20 +132,16 @@ function renderTopbar() {
 function renderStart() {
   app.innerHTML = `
     <section class="start">
-      <p class="eyebrow">Die grosse Rundreise durch die Eidgenossenschaft</p>
-      <h1 class="hero-title">Grand Tour de <span class="accent">Quiz</span> — entdecke die Schweiz.</h1>
-      <p class="hero-sub">
-        ${ALL_STATIONS} Orte von Genf bis Schaffhausen liegen auf der Karte. Jede Reise
-        führt dich per Zufall durch eine andere Auswahl — mit Fragen zu Geografie,
-        Kultur, Geschichte und allerlei Kuriosem.
-      </p>
+      <p class="eyebrow">${t("eyebrow")}</p>
+      <h1 class="hero-title">Grand Tour de <span class="accent">Quiz</span>${t("heroTail")}</h1>
+      <p class="hero-sub">${fmt(t("heroSub"), { n: ALL_STATIONS })}</p>
       <div class="hero-stats">
-        <div class="stat"><div class="num">${ALL_STATIONS}</div><div class="lbl">Orte auf der Karte</div></div>
-        <div class="stat"><div class="num">${ALL_QUESTIONS}</div><div class="lbl">Fragen im Fundus</div></div>
-        <div class="stat"><div class="num">${ROUTE_MIN}–${ROUTE_MAX}</div><div class="lbl">Etappen pro Reise</div></div>
+        <div class="stat"><div class="num">${ALL_STATIONS}</div><div class="lbl">${t("statOrte")}</div></div>
+        <div class="stat"><div class="num">${ALL_QUESTIONS}</div><div class="lbl">${t("statFragen")}</div></div>
+        <div class="stat"><div class="num">${ROUTE_MIN}–${ROUTE_MAX}</div><div class="lbl">${t("statEtappen")}</div></div>
       </div>
       <div class="start-actions">
-        <button class="btn btn-red" id="startBtn">Zufallsreise starten <span class="arrow">→</span></button>
+        <button class="btn btn-red" id="startBtn">${t("startBtn")} <span class="arrow">→</span></button>
       </div>
     </section>`;
   document.getElementById("startBtn").onclick = () => { startJourney(); render(); };
@@ -160,10 +198,10 @@ function renderMap() {
   app.innerHTML = `
     <section class="mapview">
       <div class="section-head">
-        <h2>Deine Reiseroute</h2>
+        <h2>${t("mapTitle")}</h2>
         ${canReroll
-          ? `<button class="reroll" id="reroll">↻ Andere Route würfeln</button>`
-          : `<span class="hint">${allDone ? "Alle Etappen geschafft" : "Tippe auf die rote Station"}</span>`}
+          ? `<button class="reroll" id="reroll">${t("reroll")}</button>`
+          : `<span class="hint">${allDone ? t("hintDone") : t("hintTap")}</span>`}
       </div>
 
       <div class="map-wrap">
@@ -174,22 +212,22 @@ function renderMap() {
           ${stations}
         </svg>
         <div class="map-legend">
-          <span><i class="lg-dot current"></i> Aktuell</span>
-          <span><i class="lg-dot done"></i> Geschafft</span>
-          <span><i class="lg-dot"></i> Auf Route</span>
-          <span><i class="lg-dot off"></i> Nicht auf dieser Route</span>
+          <span><i class="lg-dot current"></i> ${t("legCurrent")}</span>
+          <span><i class="lg-dot done"></i> ${t("legDone")}</span>
+          <span><i class="lg-dot"></i> ${t("legOnRoute")}</span>
+          <span><i class="lg-dot off"></i> ${t("legOff")}</span>
         </div>
       </div>
 
       <div class="cta-row">
         ${allDone
-          ? `<span class="cta-next-label">Diese Reise ist zu Ende.</span>
-             <button class="btn btn-red" id="toEnd">Ergebnis ansehen <span class="arrow">→</span></button>`
+          ? `<span class="cta-next-label">${t("tripEnd")}</span>
+             <button class="btn btn-red" id="toEnd">${t("seeResult")} <span class="arrow">→</span></button>`
           : `<div class="cta-next">
                <div class="cta-thumb">${stationArt(next.id)}</div>
-               <span class="cta-next-label">Nächste Station: <b>${next.name}</b> — ${next.region}</span>
+               <span class="cta-next-label">${t("nextStation")} <b>${next.name}</b> — ${next.region}</span>
              </div>
-             <button class="btn btn-red" id="goStation">Nach ${next.name} reisen <span class="arrow">→</span></button>`}
+             <button class="btn btn-red" id="goStation">${fmt(t("travelTo"), { name: next.name })} <span class="arrow">→</span></button>`}
       </div>
     </section>`;
 
@@ -255,7 +293,7 @@ function renderStation(qi, showIntro) {
       <div class="qprogress">${segs}</div>
       ${qi === 0 && showIntro ? `<div class="intro-card">${s.intro}</div>` : ""}
 
-      <p class="topic-chip">${q.topic}</p>
+      <p class="topic-chip">${topicLabel(q.topic)}</p>
       <h2 class="question">${q.q}</h2>
       <div class="options" id="options">
         ${q.options.map((opt, k) => `
@@ -295,12 +333,12 @@ function handleAnswer(qi, chosen, opts) {
   const fb = document.getElementById("feedback");
   fb.innerHTML = `
     <div class="explain ${correct ? "good" : "bad"}">
-      <div class="exp-head">${correct ? "Richtig" : "Leider falsch"} · Wissenswert</div>
+      <div class="exp-head">${correct ? t("right") : t("wrong")} · ${t("worthKnowing")}</div>
       <p>${q.explain}</p>
     </div>
     <div class="quiz-actions">
       <button class="btn ${isLast ? "btn-red" : ""}" id="nextBtn">
-        ${isLast ? "Etappe abschliessen" : "Weiter"} <span class="arrow">→</span>
+        ${isLast ? t("finishStage") : t("weiter")} <span class="arrow">→</span>
       </button>
     </div>`;
 
@@ -325,11 +363,8 @@ function finishStation() {
    ============================================================ */
 function rankFor(score, total) {
   const pct = total ? score / total : 0;
-  if (pct === 1) return { rank: "Ehren-Eidgenosse 🇨🇭", verdict: "Makellos! Du kennst die Schweiz bis in den letzten Bergkanton." };
-  if (pct >= 0.8) return { rank: "Bergführer", verdict: "Beeindruckend — du findest dich in der Schweiz blendend zurecht." };
-  if (pct >= 0.6) return { rank: "Wanderfreund", verdict: "Solide Reise! Ein paar Pfade darfst du noch erkunden." };
-  if (pct >= 0.4) return { rank: "Tagesausflügler", verdict: "Ein guter Anfang — die Schweiz hat noch viel zu zeigen." };
-  return { rank: "Neuankömmling", verdict: "Willkommen! Die Reise ist der beste Weg, das Land kennenzulernen." };
+  const ranks = (I18N[LANG] || I18N.de).ranks;
+  return ranks.find((r) => pct >= r.min) || ranks[ranks.length - 1];
 }
 
 function renderEnd() {
@@ -340,15 +375,15 @@ function renderEnd() {
   app.innerHTML = `
     <section class="end">
       <div class="big-flag"><span class="flag-v"></span><span class="flag-h"></span></div>
-      <h2>Reise vollendet.</h2>
+      <h2>${t("tripDone")}</h2>
       <div class="score-big">${score}<span class="of"> / ${total}</span></div>
       <div class="rank">${rank}</div>
       <p class="verdict">${verdict}</p>
-      <p class="visited">Diese Route: ${visited}</p>
+      <p class="visited">${t("thisRoute")} ${visited}</p>
       <div class="end-actions">
-        <button class="btn btn-red" id="shareBtn">Ergebnis teilen <span class="arrow">↗</span></button>
-        <button class="btn btn-ghost" id="restart">Neue Reise <span class="arrow">↻</span></button>
-        <button class="btn btn-ghost" id="reviewMap">Karte ansehen</button>
+        <button class="btn btn-red" id="shareBtn">${t("share")} <span class="arrow">↗</span></button>
+        <button class="btn btn-ghost" id="restart">${t("newTrip")} <span class="arrow">↻</span></button>
+        <button class="btn btn-ghost" id="reviewMap">${t("viewMap")}</button>
       </div>
     </section>`;
   document.getElementById("restart").onclick = () => { startJourney(); render(); };
@@ -360,7 +395,7 @@ function renderEnd() {
 const SHARE_URL = "https://anditola.github.io/grand-tour-de-quiz/";
 
 async function shareResult(score, total, rank) {
-  const text = `🇨🇭 Grand Tour de Quiz: ${score}/${total} Punkte — Rang «${rank}». Reise mit über die Landkarte der Schweiz und schau, ob du mehr schaffst!`;
+  const text = fmt(t("shareText"), { score, total, rank });
   const data = { title: "Grand Tour de Quiz", text, url: SHARE_URL };
   if (navigator.share) {
     try { await navigator.share(data); return; }
@@ -368,9 +403,9 @@ async function shareResult(score, total, rank) {
   }
   try {
     await navigator.clipboard.writeText(`${text} ${SHARE_URL}`);
-    toast("Ergebnis kopiert — jetzt teilen!");
+    toast(t("toastCopied"));
   } catch (e) {
-    toast("Zum Teilen: " + SHARE_URL);
+    toast(t("toastShare") + SHARE_URL);
   }
 }
 
@@ -396,4 +431,5 @@ function render() {
   }
 }
 
+initLangSwitch();
 render();
